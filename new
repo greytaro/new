@@ -1,0 +1,1051 @@
+!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>《逐玉故書》Matthe & 小B 的冒險過關遊戲</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font & FontAwesome icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;800&family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans TC', 'Fredoka', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .pixel-border {
+            border: 4px solid #4a5568;
+            box-shadow: 0 6px 0 #2d3748;
+        }
+        .custom-btn {
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        .custom-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+        /* Mobile D-Pad Touch styles */
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.35);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 min-h-screen flex flex-col items-center justify-center p-2 md:p-4 overflow-x-hidden select-none">
+
+    <!-- Header Banner -->
+    <header class="w-full max-w-4xl bg-gradient-to-r from-sky-100 via-rose-100 to-amber-100 rounded-2xl p-3 md:p-4 mb-3 shadow-lg flex items-center justify-between border-2 border-slate-300">
+        <div class="flex items-center space-x-3">
+            <div class="bg-rose-500 text-white p-2 md:p-3 rounded-xl text-xl md:text-2xl font-black shadow-md">
+                <i class="fa-solid font-bold fa-book-bookmark"></i>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-2xl font-black text-slate-800 tracking-wide">《逐玉故書》動作答題過關遊戲</h1>
+                <p class="text-xs md:text-sm text-slate-600 font-medium">Matthew (1993) & 小bb (1998) 的回憶與工作紙問答之旅</p>
+            </div>
+        </div>
+        <button id="worksheetBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-2 rounded-xl text-xs md:text-sm shadow-md transition flex items-center gap-1">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span class="hidden sm:inline">故事工作紙</span>
+        </button>
+    </header>
+
+    <!-- Main Game Box Container -->
+    <div class="relative w-full max-w-4xl aspect-[16/9] bg-sky-950 rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-700 flex items-center justify-center">
+        
+        <!-- Canvas Game Screen -->
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- UI Overlay: Start Screen -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-20">
+            <div class="inline-block bg-gradient-to-r from-pink-500 to-sky-500 text-white text-xs md:text-sm px-4 py-1 rounded-full font-bold uppercase tracking-wider mb-2 shadow">
+                動作過關 × 工作紙問答
+            </div>
+            <h2 class="text-3xl md:text-5xl font-extrabold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-rose-300 via-amber-200 to-sky-300">
+                逐玉故書：答題解謎之旅
+            </h2>
+            <p class="max-w-md text-xs md:text-sm text-slate-300 mb-6 leading-relaxed">
+                1998年生的活潑<strong class="text-pink-300">小bb</strong> 與 1993年生的沉穩<strong class="text-sky-300">Matthew</strong>！<br>
+                收集回憶物品並抵達終點後，必須<strong class="text-amber-300">答對工作紙題目</strong>才能通往下一關！
+            </p>
+            <button id="startGameBtn" class="custom-btn bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white text-base md:text-xl font-black py-3 px-8 rounded-full shadow-lg border-2 border-white/40 flex items-center gap-2">
+                <i class="fa-solid fa-play"></i> 開始冒險挑戰
+            </button>
+        </div>
+
+        <!-- UI Overlay: Story Dialogue Modal -->
+        <div id="dialogOverlay" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-end justify-center p-4 md:p-6 z-30">
+            <div class="bg-white/95 border-2 border-amber-300 w-full max-w-2xl rounded-2xl p-4 shadow-2xl flex flex-col space-y-3 animate-fade-in">
+                <div class="flex items-center justify-between border-b pb-2">
+                    <span id="dialogSpeaker" class="font-extrabold text-sm md:text-base px-3 py-1 rounded-lg bg-pink-100 text-pink-700 border border-pink-300">
+                        故事背景
+                    </span>
+                    <span id="dialogStageTag" class="text-xs font-bold text-slate-400">STAGE 1</span>
+                </div>
+                <p id="dialogText" class="text-xs md:text-base text-slate-700 font-semibold leading-relaxed min-h-[50px]">
+                    ...
+                </p>
+                <div class="flex justify-end">
+                    <button id="nextDialogBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2 rounded-xl text-xs md:text-sm shadow flex items-center gap-1">
+                        繼續 <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Overlay: Worksheet Modal -->
+        <div id="worksheetModal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-40 overflow-y-auto">
+            <div class="bg-slate-50 text-slate-800 rounded-2xl w-full max-w-2xl p-5 md:p-6 shadow-2xl border-4 border-sky-300 relative">
+                <button id="closeWorksheetBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                    &times;
+                </button>
+                <div class="text-center border-b pb-3 mb-4">
+                    <h3 class="text-xl md:text-2xl font-black text-slate-800">《逐玉故書》角色設定與情節工作紙</h3>
+                    <p class="text-xs text-slate-500">提示：過關問題皆出自以下題目重點！</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs md:text-sm mb-4">
+                    <div class="bg-pink-50 p-3 rounded-xl border border-pink-200">
+                        <h4 class="font-bold text-pink-700 mb-1"><i class="fa-solid fa-venus"></i> 女主角：小bb</h4>
+                        <p><strong>出生年份：</strong>1998年</p>
+                        <p><strong>性格：</strong>靈活直率，勇於挑戰</p>
+                        <p><strong>MBTI：</strong>外向靈動型 (ENFP)</p>
+                    </div>
+                    <div class="bg-sky-50 p-3 rounded-xl border border-sky-200">
+                        <h4 class="font-bold text-sky-700 mb-1"><i class="fa-solid fa-mars"></i> 男主角：Matthew</h4>
+                        <p><strong>出生年份：</strong>1993年</p>
+                        <p><strong>性格：</strong>深沉內斂，具洞察力</p>
+                        <p><strong>MBTI：</strong>沉穩內向型 (INTJ)</p>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200 space-y-2 text-xs md:text-sm">
+                    <h4 class="font-bold text-amber-800 border-b border-amber-200 pb-1">核心情節對照：</h4>
+                    <p>1. <strong>初見地點：</strong> 最早於 <span class="bg-amber-200 px-1 rounded font-bold text-amber-900">HKU 港大鐘樓</span> 相遇。</p>
+                    <p>2. <strong>感情波折：</strong> 中間曾經分開了 <span class="bg-amber-200 px-1 rounded font-bold text-amber-900">1 年</span>。</p>
+                    <p>3. <strong>相處模式：</strong> 小bb的外向靈動打破男主防線；Matthew的包容與洞察帶來極大的溫柔與安全感。</p>
+                </div>
+
+                <div class="mt-4 flex justify-center">
+                    <button id="resumeFromWorksheetBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-6 py-2 rounded-xl text-xs md:text-sm">
+                        回到遊戲
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Overlay: Interactive Quiz Modal -->
+        <div id="quizModal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-6 z-40">
+            <div class="bg-white rounded-2xl w-full max-w-xl p-5 md:p-6 shadow-2xl border-4 border-amber-400 text-slate-800 relative animate-fade-in">
+                <div class="flex justify-between items-center border-b pb-2 mb-3">
+                    <span class="bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-lg">
+                        <i class="fa-solid fa-circle-question mr-1"></i> 過關工作紙測驗
+                    </span>
+                    <span id="quizStageTag" class="text-xs font-bold text-slate-400">STAGE 1</span>
+                </div>
+                
+                <h3 id="quizQuestion" class="text-sm md:text-lg font-bold text-slate-800 mb-4 leading-snug">
+                    題目載入中...
+                </h3>
+
+                <!-- Quiz Options -->
+                <div id="quizOptions" class="space-y-2.5 mb-4">
+                    <!-- Dynamic option buttons inserted here -->
+                </div>
+
+                <!-- Quiz Feedback Alert -->
+                <div id="quizFeedback" class="hidden p-3 rounded-xl text-xs md:text-sm font-bold text-center mb-3">
+                    <!-- Correct / Incorrect feedback -->
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="submitQuizBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs md:text-sm shadow flex items-center gap-1 transition disabled:opacity-50" disabled>
+                        提交答案 <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Overlay: Game Victory Final Card -->
+        <div id="victoryOverlay" class="hidden absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-30">
+            <div class="text-yellow-400 text-4xl md:text-6xl mb-2 animate-bounce">
+                <i class="fa-solid fa-heart-circle-check"></i>
+            </div>
+            <h2 class="text-2xl md:text-4xl font-black text-rose-300 mb-2">恭喜全勝通關！《逐玉故書》完美篇章</h2>
+            <p class="max-w-md text-xs md:text-sm text-slate-300 mb-6 leading-relaxed">
+                小bb 與 Matthew 順利解開了工作紙的所有謎題，克服了 1 年的分離與性格的磨合，攜手走向幸福！
+            </p>
+
+            <div class="bg-slate-800/80 p-4 rounded-xl border border-rose-400/40 max-w-md w-full mb-6 text-left space-y-2 text-xs md:text-sm">
+                <div class="flex justify-between text-pink-300 font-bold">
+                    <span>女主角：小bb (1998)</span>
+                    <span>男主角：Matthew (1993)</span>
+                </div>
+                <div class="text-slate-300">
+                    <i class="fa-solid fa-check text-green-400 mr-1"></i> 初遇地點：HKU 港大鐘樓 (答對考驗)
+                </div>
+                <div class="text-slate-300">
+                    <i class="fa-solid fa-check text-green-400 mr-1"></i> 經歷波折：克服相隔 1 年的考驗 (答對考驗)
+                </div>
+                <div class="text-slate-300">
+                    <i class="fa-solid fa-check text-green-400 mr-1"></i> 關係特質：外向靈動 × 包容洞察溫柔 (答對考驗)
+                </div>
+            </div>
+
+            <button id="restartGameBtn" class="custom-btn bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-black py-3 px-8 rounded-full text-sm md:text-base shadow-lg">
+                <i class="fa-solid fa-rotate-right"></i> 再玩一次
+            </button>
+        </div>
+
+        <!-- Canvas HUD Overlay -->
+        <div id="hudOverlay" class="hidden absolute top-3 left-3 right-3 flex justify-between items-center pointer-events-none z-10">
+            <div class="bg-slate-900/80 backdrop-blur border border-slate-600 text-white px-3 py-1.5 rounded-xl text-xs md:text-sm flex items-center space-x-2 shadow">
+                <span id="characterBadge" class="bg-pink-500 text-white px-2 py-0.5 rounded font-extrabold text-xs">小bb</span>
+                <span id="stageTitle" class="font-bold text-amber-300">第 1 關：HKU 鐘樓初遇</span>
+            </div>
+            <div class="bg-slate-900/80 backdrop-blur border border-slate-600 text-white px-3 py-1.5 rounded-xl text-xs md:text-sm flex items-center space-x-3 shadow">
+                <span class="flex items-center text-rose-400 font-bold">
+                    <i class="fa-solid fa-heart mr-1.5"></i>
+                    <span id="collectibleCount">0 / 5</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Touch Controls Overlay for Mobile -->
+        <div id="touchControls" class="hidden absolute bottom-3 left-3 right-3 justify-between items-end pointer-events-auto z-10">
+            <!-- Left / Right D-Pad -->
+            <div class="flex gap-2">
+                <button id="btnLeft" class="touch-btn w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-white text-xl active:scale-95">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <button id="btnRight" class="touch-btn w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-white text-xl active:scale-95">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            
+            <!-- Switch / Action & Jump Buttons -->
+            <div class="flex gap-2">
+                <button id="btnSwitch" class="touch-btn hidden w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-amber-300 text-lg font-bold active:scale-95">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+                <button id="btnJump" class="touch-btn w-14 h-14 md:w-18 md:h-18 rounded-full bg-rose-500/60 border-rose-300 flex items-center justify-center text-white text-2xl font-bold active:scale-95 shadow-lg">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Instruction Footer -->
+    <footer class="w-full max-w-4xl mt-3 flex flex-wrap justify-between items-center text-xs text-slate-400 px-2 gap-2">
+        <div class="flex items-center gap-3">
+            <span><i class="fa-solid fa-keyboard mr-1"></i> 控制說明: [A/D] 或 [←/→] 移動 | [W/Space] 跳躍 | [E] 切換角色(第3關)</span>
+        </div>
+        <div>
+            © 2026 逐玉故書工作室 版權所有
+        </div>
+    </footer>
+
+    <script>
+        // Web Audio API Sound Synthesizer (No external audio files needed)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playCollect() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08); // E5
+                osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.16); // G5
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+            playWin() {
+                if (!this.ctx) return;
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.12);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + index * 0.12);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.12 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.12);
+                    osc.stop(this.ctx.currentTime + index * 0.12 + 0.25);
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        const CANVAS_WIDTH = 960;
+        const CANVAS_HEIGHT = 540;
+
+        // Level Story Definitions
+        const LEVEL_DATA = [
+            {
+                id: 1,
+                title: "第 1 關：HKU 鐘樓初遇",
+                character: "小bb",
+                badgeBg: "bg-pink-500",
+                introSpeaker: "故事背景：初遇 HKU",
+                introText: "1998年生的小bb熱情活潑、勇於挑戰。在香港大學（HKU）的古樸鐘樓前，她遇見了1993年生的沉穩學長 Matthew。收集5張『HKU筆記與咖啡』，抵達終點並回答工作紙題目過關！",
+                targetCollectibles: 5,
+                bgType: "hku",
+                quiz: {
+                    question: "【工作紙第一題】Matthew 與 小bb 最早是在哪裡相遇，並展開了後續的交集？",
+                    options: [
+                        "A. HKU 港大鐘樓",
+                        "B. 銅鑼灣咖啡廳",
+                        "C. 中環懷舊書店"
+                    ],
+                    correctIndex: 0
+                },
+                platforms: [
+                    { x: 0, y: 480, w: 1200, h: 60 },
+                    { x: 220, y: 380, w: 140, h: 20 },
+                    { x: 420, y: 300, w: 160, h: 20 },
+                    { x: 650, y: 230, w: 140, h: 20 },
+                    { x: 880, y: 340, w: 160, h: 20 },
+                    { x: 1100, y: 420, w: 200, h: 20 },
+                    { x: 1350, y: 480, w: 450, h: 60 }
+                ],
+                collectibles: [
+                    { x: 260, y: 330, item: "note" },
+                    { x: 480, y: 250, item: "coffee" },
+                    { x: 700, y: 180, item: "heart" },
+                    { x: 920, y: 290, item: "note" },
+                    { x: 1200, y: 370, item: "coffee" }
+                ],
+                goal: { x: 1650, y: 390, w: 50, h: 90, type: "matthe_npc" }
+            },
+            {
+                id: 2,
+                title: "第 2 關：相隔一年的考驗",
+                character: "Matthew",
+                badgeBg: "bg-sky-600",
+                introSpeaker: "故事背景：感情波折 (分開1年)",
+                introText: "故事經歷了波折，兩人曾經分開了整整1年。沉穩內斂的 Matthew 憑著深沉與洞察力，獨自跨越懸崖。收集5封『真摯情書』，抵達終點並解答工作紙題目！",
+                targetCollectibles: 5,
+                bgType: "separation",
+                quiz: {
+                    question: "【工作紙第二題】在故事的感情波折中，Matthew 與 小bb 中間曾經分開了多久？",
+                    options: [
+                        "A. 分開了 6 個月",
+                        "B. 分開了 1 年",
+                        "C. 分開了 3 年"
+                    ],
+                    correctIndex: 1
+                },
+                platforms: [
+                    { x: 0, y: 480, w: 300, h: 60 },
+                    { x: 380, y: 410, w: 120, h: 20 },
+                    { x: 580, y: 320, w: 130, h: 20 },
+                    { x: 780, y: 240, w: 140, h: 20 },
+                    { x: 1000, y: 330, w: 130, h: 20 },
+                    { x: 1200, y: 420, w: 140, h: 20 },
+                    { x: 1420, y: 480, w: 400, h: 60 }
+                ],
+                collectibles: [
+                    { x: 420, y: 360, item: "letter" },
+                    { x: 620, y: 270, item: "letter" },
+                    { x: 830, y: 190, item: "heart" },
+                    { x: 1040, y: 280, item: "letter" },
+                    { x: 1240, y: 370, item: "letter" }
+                ],
+                goal: { x: 1680, y: 390, w: 50, h: 90, type: "xiaob_npc" }
+            },
+            {
+                id: 3,
+                title: "第 3 關：逐玉合璧 攜手同行",
+                character: "雙人攜手",
+                badgeBg: "bg-gradient-to-r from-pink-500 to-sky-500",
+                introSpeaker: "故事背景：心結解開與互補",
+                introText: "小bb 的活潑打破了 Matthew 的防線，Matthew 的包容帶來溫柔。兩人攜手同行 (按 [E] 可切換主角)！收集5個印記，回答最終工作紙題以開啟幸福大門！",
+                targetCollectibles: 5,
+                bgType: "together",
+                quiz: {
+                    question: "【工作紙特質題】關於 1993年生 Matthew 與 1998年生 小bb 的互補互動模式，下列何者正確？",
+                    options: [
+                        "A. 小bb的外向靈動打破男主防線；Matthew的包容洞察帶來溫柔",
+                        "B. Matthew 性格活潑好動；小bb 性格沉穩內向冷靜",
+                        "C. 兩人的性格完全相同，沒有任何年齡與個性差異"
+                    ],
+                    correctIndex: 0
+                },
+                platforms: [
+                    { x: 0, y: 480, w: 400, h: 60 },
+                    { x: 320, y: 360, w: 120, h: 20 },
+                    { x: 500, y: 260, w: 180, h: 20 },
+                    { x: 750, y: 350, w: 150, h: 20 },
+                    { x: 970, y: 240, w: 160, h: 20 },
+                    { x: 1200, y: 340, w: 180, h: 20 },
+                    { x: 1450, y: 480, w: 500, h: 60 }
+                ],
+                collectibles: [
+                    { x: 360, y: 310, item: "jade" },
+                    { x: 580, y: 210, item: "jade" },
+                    { x: 800, y: 300, item: "heart" },
+                    { x: 1020, y: 180, item: "jade" },
+                    { x: 1260, y: 280, item: "jade" }
+                ],
+                goal: { x: 1750, y: 360, w: 80, h: 120, type: "wedding_portal" }
+            }
+        ];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Adapt canvas scale
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // Input state tracker
+        const keys = {
+            left: false,
+            right: false,
+            jump: false,
+            switch: false
+        };
+
+        // Game Global State
+        let currentStageIndex = 0;
+        let gameActive = false;
+        let dialogueActive = false;
+        let collectiblesCount = 0;
+        let cameraX = 0;
+        let activeCharacter = "xiaob"; // "xiaob" or "matthe"
+
+        // Player physics object
+        const player = {
+            x: 50,
+            y: 350,
+            w: 36,
+            h: 64,
+            vx: 0,
+            vy: 0,
+            speed: 5.5,
+            jumpPower: -12.5,
+            grounded: false,
+            facing: 'right',
+            animFrame: 0,
+            animTimer: 0
+        };
+
+        // Particle System for Effects
+        let particles = [];
+
+        function createSparkles(x, y, color = "#f43f5e") {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6 - 2,
+                    size: Math.random() * 6 + 3,
+                    color: color,
+                    life: 1.0
+                });
+            }
+        }
+
+        // Draw Cute procedural character - 小B (1998, Pink/Brown style)
+        function drawXiaoB(c, x, y, facing, animFrame) {
+            c.save();
+            c.translate(x + 18, y + 32);
+            if (facing === 'left') c.scale(-1, 1);
+
+            // Bobbing animation offset
+            const bob = Math.sin(animFrame * 0.2) * 2;
+
+            // Hair (Long Brown)
+            c.fillStyle = "#654321";
+            c.beginPath();
+            c.arc(0, -14 + bob, 16, 0, Math.PI * 2);
+            c.fill();
+            c.fillRect(-15, -14 + bob, 30, 22);
+
+            // Body (Pink Top)
+            c.fillStyle = "#f43f5e";
+            c.beginPath();
+            c.roundRect(-10, 2 + bob, 20, 18, 5);
+            c.fill();
+
+            // Skirt (White/Pink)
+            c.fillStyle = "#fbcfe8";
+            c.beginPath();
+            c.moveTo(-12, 18 + bob);
+            c.lineTo(12, 18 + bob);
+            c.lineTo(15, 26 + bob);
+            c.lineTo(-15, 26 + bob);
+            c.closePath();
+            c.fill();
+
+            // Head (Skin tone)
+            c.fillStyle = "#ffdfc4";
+            c.beginPath();
+            c.arc(0, -12 + bob, 12, 0, Math.PI * 2);
+            c.fill();
+
+            // Eyes & Smile
+            c.fillStyle = "#1e293b";
+            c.beginPath();
+            c.arc(4, -13 + bob, 2, 0, Math.PI * 2);
+            c.fill();
+            
+            c.strokeStyle = "#e11d48";
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.arc(4, -9 + bob, 3, 0.1, Math.PI - 0.1);
+            c.stroke();
+
+            // Cute Blue Crossbody Bag (Matching image reference)
+            c.fillStyle = "#38bdf8";
+            c.fillRect(2, 6 + bob, 8, 8);
+            c.strokeStyle = "#0284c7";
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.moveTo(-8, 2 + bob);
+            c.lineTo(4, 10 + bob);
+            c.stroke();
+
+            // Legs
+            const legOffset = Math.sin(animFrame * 0.3) * 6;
+            c.fillStyle = "#ffdfc4";
+            c.fillRect(-6, 26 + bob, 4, 8 + legOffset);
+            c.fillRect(2, 26 + bob, 4, 8 - legOffset);
+
+            c.restore();
+        }
+
+        // Draw Cute procedural character - Matthe (1993, Green/Teal shirt, Dark hair)
+        function drawMatthe(c, x, y, facing, animFrame) {
+            c.save();
+            c.translate(x + 18, y + 32);
+            if (facing === 'left') c.scale(-1, 1);
+
+            const bob = Math.sin(animFrame * 0.2) * 2;
+
+            // Head & Face
+            c.fillStyle = "#ffdfc4";
+            c.beginPath();
+            c.arc(0, -14 + bob, 12, 0, Math.PI * 2);
+            c.fill();
+
+            // Dark Short Neat Hair
+            c.fillStyle = "#2d3748";
+            c.beginPath();
+            c.arc(0, -16 + bob, 14, Math.PI, Math.PI * 2);
+            c.fill();
+            c.fillRect(-13, -18 + bob, 26, 6);
+
+            // Body (Teal/Green Button Shirt - matching image)
+            c.fillStyle = "#0d9488";
+            c.beginPath();
+            c.roundRect(-11, -2 + bob, 22, 22, 4);
+            c.fill();
+
+            // Shirt collar details
+            c.strokeStyle = "#ccfbf1";
+            c.lineWidth = 2;
+            c.beginPath();
+            c.moveTo(-4, -2 + bob);
+            c.lineTo(0, 4 + bob);
+            c.lineTo(4, -2 + bob);
+            c.stroke();
+
+            // Pants (Dark Blue)
+            c.fillStyle = "#1e293b";
+            c.fillRect(-10, 18 + bob, 20, 10);
+
+            // Eyes & Gentle Smile
+            c.fillStyle = "#0f172a";
+            c.beginPath();
+            c.arc(4, -14 + bob, 2, 0, Math.PI * 2);
+            c.fill();
+
+            c.strokeStyle = "#475569";
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.arc(3, -10 + bob, 3, 0.2, Math.PI - 0.2);
+            c.stroke();
+
+            // Legs
+            const legOffset = Math.sin(animFrame * 0.3) * 6;
+            c.fillStyle = "#334155";
+            c.fillRect(-6, 28 + bob, 5, 8 + legOffset);
+            c.fillRect(2, 28 + bob, 5, 8 - legOffset);
+
+            c.restore();
+        }
+
+        // Draw Stage Backgrounds & Visual themes
+        function drawBackground(bgType) {
+            const level = LEVEL_DATA[currentStageIndex];
+
+            if (bgType === 'hku') {
+                // HKU Campus sky gradient
+                const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+                grad.addColorStop(0, "#bae6fd");
+                grad.addColorStop(1, "#fef3c7");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // HKU Clocktower Background Silhouette
+                ctx.fillStyle = "#94a3b8";
+                const towerX = 1600 - cameraX;
+                ctx.fillRect(towerX, 150, 80, 250);
+                // Clocktower roof
+                ctx.beginPath();
+                ctx.moveTo(towerX - 10, 150);
+                ctx.lineTo(towerX + 40, 70);
+                ctx.lineTo(towerX + 90, 150);
+                ctx.fill();
+                // Clock face
+                ctx.fillStyle = "#fef08a";
+                ctx.beginPath();
+                ctx.arc(towerX + 40, 200, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "#475569";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+            } else if (bgType === 'separation') {
+                // Separation Stage - Cloudy/Melancholy sky gradient
+                const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+                grad.addColorStop(0, "#334155");
+                grad.addColorStop(1, "#64748b");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Separation Cloud shapes
+                ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        // Quiz System State
+        let selectedOptionIndex = null;
+        let quizActive = false;
+
+        function initStage(stageIdx) {
+            currentStageIndex = stageIdx;
+            const stage = LEVEL_DATA[stageIdx];
+
+            // Reset character and items
+            player.x = 50;
+            player.y = 350;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+
+            collectiblesCount = 0;
+            cameraX = 0;
+
+            if (stage.character === "小bb") activeCharacter = "xiaob";
+            else if (stage.character === "Matthew") activeCharacter = "matthe";
+            else activeCharacter = "xiaob"; // Stage 3 start as xiaob
+
+            // Clone stage collectibles
+            stage.currentCollectibles = stage.collectibles.map(c => ({...c, collected: false}));
+
+            // Update UI Header
+            document.getElementById('stageTitle').innerText = stage.title;
+            document.getElementById('characterBadge').innerText = activeCharacter === "xiaob" ? "女主角：小bb" : "男主角：Matthew";
+            document.getElementById('characterBadge').className = `${stage.badgeBg} text-white px-2 py-0.5 rounded font-extrabold text-xs`;
+            document.getElementById('collectibleCount').innerText = `0 / ${stage.targetCollectibles}`;
+
+            // Show stage switch button only in Stage 3
+            if (stage.id === 3) {
+                document.getElementById('btnSwitch').classList.remove('hidden');
+            } else {
+                document.getElementById('btnSwitch').classList.add('hidden');
+            }
+
+            // Show Dialogue Intro
+            showDialogue(stage.introSpeaker, stage.introText, `STAGE ${stage.id}`);
+        }
+
+        // Show Worksheet Quiz Modal
+        function showQuizModal(stageIdx) {
+            gameActive = false;
+            quizActive = true;
+            selectedOptionIndex = null;
+
+            const stage = LEVEL_DATA[stageIdx];
+            const quiz = stage.quiz;
+
+            document.getElementById('quizStageTag').innerText = `STAGE ${stage.id} 關卡考驗`;
+            document.getElementById('quizQuestion').innerText = quiz.question;
+
+            const optionsContainer = document.getElementById('quizOptions');
+            optionsContainer.innerHTML = '';
+
+            quiz.options.forEach((optText, index) => {
+                const btn = document.createElement('button');
+                btn.className = "quiz-opt-btn w-full text-left p-3 rounded-xl border-2 border-slate-200 hover:border-sky-400 hover:bg-sky-50 text-xs md:text-sm font-semibold transition flex items-center justify-between";
+                btn.innerHTML = `<span>${optText}</span> <i class="fa-regular fa-circle text-slate-300 text-lg"></i>`;
+                
+                btn.onclick = () => {
+                    selectedOptionIndex = index;
+                    // Reset styling on all options
+                    document.querySelectorAll('.quiz-opt-btn').forEach((b, i) => {
+                        b.className = "quiz-opt-btn w-full text-left p-3 rounded-xl border-2 border-slate-200 hover:border-sky-400 hover:bg-sky-50 text-xs md:text-sm font-semibold transition flex items-center justify-between";
+                        b.querySelector('i').className = "fa-regular fa-circle text-slate-300 text-lg";
+                    });
+                    // Highlight selected
+                    btn.className = "quiz-opt-btn w-full text-left p-3 rounded-xl border-2 border-amber-500 bg-amber-50 text-xs md:text-sm font-bold text-amber-900 transition flex items-center justify-between shadow-sm";
+                    btn.querySelector('i').className = "fa-solid fa-circle-check text-amber-600 text-lg";
+
+                    document.getElementById('submitQuizBtn').disabled = false;
+                };
+
+                optionsContainer.appendChild(btn);
+            });
+
+            // Reset feedback display
+            const feedbackBox = document.getElementById('quizFeedback');
+            feedbackBox.classList.add('hidden');
+
+            document.getElementById('submitQuizBtn').disabled = true;
+            document.getElementById('quizModal').classList.remove('hidden');
+        }
+
+        // Submit Quiz Answer Handler
+        document.getElementById('submitQuizBtn').addEventListener('click', () => {
+            if (selectedOptionIndex === null) return;
+
+            const stage = LEVEL_DATA[currentStageIndex];
+            const feedbackBox = document.getElementById('quizFeedback');
+
+            if (selectedOptionIndex === stage.quiz.correctIndex) {
+                // Correct Answer!
+                sound.playWin();
+                feedbackBox.className = "p-3 rounded-xl text-xs md:text-sm font-bold text-center mb-3 bg-emerald-100 text-emerald-800 border border-emerald-300 block";
+                feedbackBox.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> 答對了！非常了解《逐玉故書》工作紙情節！`;
+
+                setTimeout(() => {
+                    document.getElementById('quizModal').classList.add('hidden');
+                    quizActive = false;
+
+                    if (currentStageIndex < LEVEL_DATA.length - 1) {
+                        initStage(currentStageIndex + 1);
+                    } else {
+                        // All stages finished -> Victory screen
+                        gameActive = false;
+                        document.getElementById('victoryOverlay').classList.remove('hidden');
+                    }
+                }, 1200);
+
+            } else {
+                // Wrong Answer!
+                feedbackBox.className = "p-3 rounded-xl text-xs md:text-sm font-bold text-center mb-3 bg-rose-100 text-rose-800 border border-rose-300 block animate-shake";
+                feedbackBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600 mr-1"></i> 答案不太對哦！可以點擊右上角「故事工作紙」複習一下！`;
+            }
+        });
+
+        function switchCharacter() {
+            if (LEVEL_DATA[currentStageIndex].id !== 3) return;
+            activeCharacter = activeCharacter === "xiaob" ? "matthe" : "xiaob";
+            sound.playJump();
+            createSparkles(player.x - cameraX + 18, player.y + 32, activeCharacter === "xiaob" ? "#f43f5e" : "#0d9488");
+            document.getElementById('characterBadge').innerText = activeCharacter === "xiaob" ? "女主角：小bb" : "男主角：Matthew";
+            document.getElementById('characterBadge').className = activeCharacter === "xiaob" ? "bg-pink-500 text-white px-2 py-0.5 rounded font-extrabold text-xs" : "bg-teal-600 text-white px-2 py-0.5 rounded font-extrabold text-xs";
+        }
+
+        // Main Physics & Movement Update
+        function update() {
+            if (!gameActive || dialogueActive || quizActive) return;
+
+            const stage = LEVEL_DATA[currentStageIndex];
+
+            // Horizontal input handling
+            if (keys.left) {
+                player.vx = -player.speed;
+                player.facing = 'left';
+            } else if (keys.right) {
+                player.vx = player.speed;
+                player.facing = 'right';
+            } else {
+                player.vx *= 0.7; // Friction
+            }
+
+            // Jump input handling
+            if (keys.jump && player.grounded) {
+                player.vy = player.jumpPower;
+                player.grounded = false;
+                sound.playJump();
+                createSparkles(player.x - cameraX + 18, player.y + 60, "#ffffff");
+            }
+
+            // Gravity
+            player.vy += 0.65;
+
+            // Apply horizontal velocity
+            player.x += player.vx;
+
+            // Left boundary check
+            if (player.x < 0) player.x = 0;
+
+            // Platform Collision Detection
+            player.grounded = false;
+            for (let plat of stage.platforms) {
+                if (
+                    player.x + player.w > plat.x &&
+                    player.x < plat.x + plat.w &&
+                    player.y + player.h >= plat.y &&
+                    player.y + player.h <= plat.y + plat.h &&
+                    player.vy >= 0
+                ) {
+                    player.y = plat.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                }
+            }
+
+            // Apply vertical velocity
+            player.y += player.vy;
+
+            // Death/Fell in gap check
+            if (player.y > CANVAS_HEIGHT + 100) {
+                // Respawn
+                player.x = 50;
+                player.y = 300;
+                player.vy = 0;
+            }
+
+            // Camera tracking
+            cameraX = player.x - 200;
+            if (cameraX < 0) cameraX = 0;
+
+            // Collectibles collision check
+            stage.currentCollectibles.forEach((item) => {
+                if (!item.collected) {
+                    const dx = player.x + player.w / 2 - item.x;
+                    const dy = player.y + player.h / 2 - item.y;
+                    if (Math.abs(dx) < 28 && Math.abs(dy) < 32) {
+                        item.collected = true;
+                        collectiblesCount++;
+                        sound.playCollect();
+                        createSparkles(item.x - cameraX, item.y, "#fef08a");
+                        document.getElementById('collectibleCount').innerText = `${collectiblesCount} / ${stage.targetCollectibles}`;
+                    }
+                }
+            });
+
+            // Goal/Portal Collision Check
+            const goal = stage.goal;
+            if (
+                player.x + player.w > goal.x &&
+                player.x < goal.x + goal.w &&
+                player.y + player.h > goal.y
+            ) {
+                if (collectiblesCount >= stage.targetCollectibles) {
+                    // Collectibles complete -> Trigger Worksheet Quiz!
+                    sound.playCollect();
+                    showQuizModal(currentStageIndex);
+                }
+            }
+
+            // Animation frame counter
+            if (Math.abs(player.vx) > 0.5) {
+                player.animTimer++;
+                if (player.animTimer % 4 === 0) player.animFrame++;
+            } else {
+                player.animFrame = 0;
+            }
+
+            // Particles Update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.04;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // Draw Game Canvas Scene
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            const stage = LEVEL_DATA[currentStageIndex];
+
+            // 1. Background
+            drawBackground(stage.bgType);
+
+            // 2. Draw Platforms
+            stage.platforms.forEach(plat => {
+                ctx.fillStyle = "#334155";
+                ctx.beginPath();
+                ctx.roundRect(plat.x - cameraX, plat.y, plat.w, plat.h, 6);
+                ctx.fill();
+
+                // Top grass/highlight edge
+                ctx.fillStyle = stage.bgType === 'hku' ? "#4ade80" : stage.bgType === 'separation' ? "#94a3b8" : "#fb7185";
+                ctx.fillRect(plat.x - cameraX, plat.y, plat.w, 6);
+            });
+
+            // 3. Draw Collectibles
+            stage.currentCollectibles.forEach(item => {
+                if (!item.collected) drawCollectible(item);
+            });
+
+            // 4. Draw Goal / NPC at end
+            const goal = stage.goal;
+            if (goal.type === "matthe_npc") {
+                drawMatthe(ctx, goal.x - cameraX, goal.y, "left", 0);
+            } else if (goal.type === "xiaob_npc") {
+                drawXiaoB(ctx, goal.x - cameraX, goal.y, "left", 0);
+            } else if (goal.type === "wedding_portal") {
+                // Heart Gate Goal
+                ctx.save();
+                ctx.translate(goal.x - cameraX + 40, goal.y + 60);
+                ctx.fillStyle = "rgba(244, 63, 94, 0.8)";
+                ctx.beginPath();
+                ctx.arc(-20, -20, 30, 0, Math.PI * 2);
+                ctx.arc(20, -20, 30, 0, Math.PI * 2);
+                ctx.lineTo(0, 40);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 5. Draw Player Character
+            if (activeCharacter === "xiaob") {
+                drawXiaoB(ctx, player.x - cameraX, player.y, player.facing, player.animFrame);
+            } else {
+                drawMatthe(ctx, player.x - cameraX, player.y, player.facing, player.animFrame);
+            }
+
+            // 6. Draw Sparkle Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        // Main Animation Loop
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Keyboard Listener
+        window.addEventListener('keydown', (e) => {
+            sound.init();
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'KeyW' || e.code === 'Space' || e.code === 'ArrowUp') keys.jump = true;
+            if (e.code === 'KeyE') switchCharacter();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+            if (e.code === 'KeyW' || e.code === 'Space' || e.code === 'ArrowUp') keys.jump = false;
+        });
+
+        // Touch Control Listeners
+        const setupTouchBtn = (id, keyName) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                sound.init();
+                keys[keyName] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+            });
+        };
+
+        setupTouchBtn('btnLeft', 'left');
+        setupTouchBtn('btnRight', 'right');
+        setupTouchBtn('btnJump', 'jump');
+
+        document.getElementById('btnSwitch').addEventListener('click', () => {
+            switchCharacter();
+        });
+
+        // UI Event Handlers
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            sound.init();
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('hudOverlay').classList.remove('hidden');
+            document.getElementById('touchControls').classList.remove('hidden');
+            document.getElementById('touchControls').classList.add('flex');
+            initStage(0);
+        });
+
+        document.getElementById('nextDialogBtn').addEventListener('click', () => {
+            sound.init();
+            hideDialogue();
+        });
+
+        document.getElementById('worksheetBtn').addEventListener('click', () => {
+            sound.init();
+            document.getElementById('worksheetModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeWorksheetBtn').addEventListener('click', () => {
+            document.getElementById('worksheetModal').classList.add('hidden');
+        });
+
+        document.getElementById('resumeFromWorksheetBtn').addEventListener('click', () => {
+            document.getElementById('worksheetModal').classList.add('hidden');
+        });
+
+        document.getElementById('restartGameBtn').addEventListener('click', () => {
+            document.getElementById('victoryOverlay').classList.add('hidden');
+            initStage(0);
+        });
+
+        // Window Load Handler
+        window.onload = function () {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
